@@ -1,7 +1,8 @@
 # Design Patterns
 
-This repository contains practical examples of **classic design patterns**.
-Each design pattern has its own folder with explanations and example code demonstrating how to apply the pattern in real-world scenarios.
+Welcome to **modern-cpp-notes**—a living notebook of Modern C++, covering design patterns, smart pointers, templates, OOP internals, and everything in between.
+
+The goal of this repository is not to list every design pattern that exists—instead, it focuses on a curated selection of the most important ones. Each pattern is explained with clear descriptions and sample implementations, giving you a practical understanding of how and when to use them in Modern C++.
 
 ---
 
@@ -22,6 +23,6 @@ Each design pattern has its own folder with explanations and example code demons
 
 ---
 
-## About
+## About    
 
 It is intended for **developers who want to learn and implement design patterns**.
