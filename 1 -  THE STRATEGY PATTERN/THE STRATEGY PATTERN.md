@@ -17,9 +17,12 @@
      - [Templates with Callable Parameters](#templates-with-callable-parameters)
      - [Templates with Types (Policy Classes)](#templates-with-types-policy-classes)
      - [Why Template Customizability Matters](#why-template-customizability-matters)
-4. [Comparison: When to Use What](#comparison-when-to-use-what)
-5. [Modern C++ Best Practices](#modern-c-best-practices)
-6. [Key Takeaways](#key-takeaways)
+4. [Concepts (C++20)](#concepts-c20)
+5. [Comparison: When to Use What](#comparison-when-to-use-what)
+6. [Modern C++ Best Practices](#modern-c-best-practices)
+7. [Key Takeaways](#key-takeaways)
+8. [Resources](#resources)
+9. [Complete Example](#complete-example)
 
 ---
 
@@ -477,8 +480,84 @@ int main() {
 * **Extreme flexibility**: Fully change behavior at compile time without changing code
 * **Compile-time efficiency**: Templates avoid runtime overhead (no virtual calls)
 * **Reusability**: Same template can be used with different behaviors or policies
-* **Stateful strategies**: Functors or lambdas can store state while maintaining efficiency
+* **Stateful strategies**: Functors or lamnbdas can store state while maintaining efficiency
 * **Supports modern C++ design patterns**: Implements **strategy, policy-based design, and dependency injection** at compile time
+
+---
+
+## Concepts (C++20)
+
+### What are Concepts?
+
+* **Concepts** allow you to **constrain template parameters**.
+* They let the compiler check **at compile time** whether a type satisfies certain requirements before instantiating the template.
+* Think of them as **"interfaces for templates"**—but enforced at compile time, without runtime overhead.
+
+### Breaking down the example
+
+```cpp
+template <typename T>
+concept Logger = requires(T t, std::string_view msg) {
+    { t.log(msg) } -> std::same_as<void>;
+};
+```
+
+**Explanation line by line:**
+
+1. `template <typename T>` → this is a normal template parameter.
+2. `concept Logger` → defines a **concept** named `Logger`.
+3. `requires(T t, std::string_view msg) { ... }` → specifies the **requirements** a type `T` must fulfill to satisfy the concept.
+
+   * `T t` → an object of type `T`.
+   * `std::string_view msg` → a string message to pass.
+4. `{ t.log(msg) } -> std::same_as<void>;` → requires that `T` must have a **member function `log` that takes a `std::string_view` and returns `void`**.
+
+If `T` doesn't have such a function, the compiler will **reject it at compile time**, instead of generating a confusing template error later.
+
+### How to use this concept
+
+```cpp
+#include <string>
+#include <string_view>
+#include <concepts>
+#include <iostream>
+
+template <typename T>
+concept Logger = requires(T t, std::string_view msg) {
+    { t.log(msg) } -> std::same_as<void>;
+};
+
+// A type that satisfies Logger
+class ConsoleLogger {
+public:
+    void log(std::string_view msg) { std::cout << msg << "\n"; }
+};
+
+// Template function constrained by Logger concept
+template <Logger L>
+void doSomething(L& logger) {
+    logger.log("Hello C++20 Concepts!");
+}
+
+int main() {
+    ConsoleLogger logger;
+    doSomething(logger); // Works
+}
+```
+
+* `doSomething` will only accept types that **satisfy the Logger concept**.
+* If you try to pass a type without a `log` method returning `void`, the code will **fail to compile**.
+
+### Why this is useful
+
+1. **Better error messages** – compiler tells you exactly which constraint is violated.
+2. **Self-documenting templates** – anyone reading `template <Logger L>` immediately knows what the type needs to provide.
+3. **Safer templates** – ensures correct usage at compile-time, avoiding runtime surprises.
+
+**Summary:**
+
+> `Concepts` = a way to enforce template requirements at compile-time.
+> `Logger` concept = any type passed as a template argument **must have a `log` method that takes a `std::string_view` and returns `void`.**
 
 ---
 
@@ -513,13 +592,7 @@ Need quick, inline behavior? → Yes → Use Callbacks/Lambdas
 - **Leverage lambdas**: Capture state concisely with `[&]` or `[=]`
 - **Apply `std::move`**: Efficiently transfer ownership of strategies
 - **Document with `[[nodiscard]]`**: For factory functions
-- **Concepts (C++20)**: Constrain template parameters
-  ```cpp
-  template <typename T>
-  concept Logger = requires(T t, std::string_view msg) {
-      { t.log(msg) } -> std::same_as<void>;
-  };
-  ```
+- **Concepts (C++20)**: Constrain template parameters (see [Concepts section](#concepts-c20))
 
 ### ❌ Don'ts
 
@@ -539,10 +612,11 @@ Need quick, inline behavior? → Yes → Use Callbacks/Lambdas
 4. **Lambdas are King**: For 90% of callbacks, lambdas provide the best balance of clarity and power.
 5. **Performance Matters**: Use templates when virtual calls are unacceptable.
 6. **Testability is Crucial**: Design strategies to be mockable from day one.
+7. **Concepts (C++20)**: Use concepts to enforce compile-time contracts and improve error messages.
 
 ---
 
-## 📚 Resources
+## Resources
 
 - **Book**: *Professional C++ 6th Edition* (Marc Gregoire) - Chapter on Design Patterns
 - **C++ Core Guidelines**: [R.11: Avoid calling `new` and `delete` explicitly](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#R11)
@@ -551,7 +625,7 @@ Need quick, inline behavior? → Yes → Use Callbacks/Lambdas
 
 ---
 
-## 🎯 Example: Putting It All Together
+## Complete Example
 
 ```cpp
 // Modern, flexible, testable error handler
