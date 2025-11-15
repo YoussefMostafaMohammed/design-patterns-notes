@@ -25,7 +25,7 @@ Reusable and maintainable code is a core principle of modern software developmen
 
 ---
 
-# What “Provide Customizability” Means in C++
+# The Strategy Pattern
 
 The strategy design pattern is one way to support the dependency inversion principle (DIP) With this pattern, interfaces are used to invert dependency relationships. Interfaces are created for every provided service. If a component needs a set of services interfacesto those services are injected into the component, a mechanism called dependency injection. Using the strategy pattern makes unit testing easier, as you can easily mock services away. As an example, this section discusses a logging mechanism implemented with the strategy pattern.
 
@@ -406,41 +406,132 @@ int main() {
 
 ---
 
-# 3. **Customizability through Template Parameters**
+## 3. Customizability through Template Parameters
 
-C++ templates allow the caller to choose types or behaviors.
+C++ templates allow you to write **generic, flexible, and reusable code**. With templates, the **caller can customize types, behaviors, or policies** without modifying the implementation. This approach enables both **compile-time strategies** and **behavior injection**, making templates a powerful tool for modern C++ design.
 
-Example: passing a custom comparator to `std::sort`:
+Templates enable two main types of customization:
 
-```cpp
-std::sort(v.begin(), v.end(), [](int a, int b) {
-    return a > b; // custom behavior
-});
-```
-
-Another example: STL containers allow custom memory allocators.
-
-```cpp
-std::vector<int, MyAllocator<int>> v;
-```
-
-If you write a custom allocator, the container will use it.
-
-This is “customizability taken to the extreme.”
+1. **Behavior injection via callables** (function pointers, functors, lambdas).
+2. **Behavior injection via types / policy classes** (strategy-style customization).
 
 ---
 
-# Summary (Simple)
+### **1. Templates with Callable Parameters**
 
-| Method                    | What It Means                                    | Example                      |
-| ------------------------- | ------------------------------------------------ | ---------------------------- |
-| **Interfaces (DIP + DI)** | User provides their own implementation           | Custom logger class          |
-| **Callbacks**             | User provides a function/lambda                  | Custom error handler         |
-| **Template parameters**   | User provides a type or behavior at compile time | Custom allocator, comparator |
+Templates can accept **callable objects** (functions, function pointers, functors, lambdas) to define behavior dynamically.
+
+```cpp
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <functional>
+
+// Template accepting any callable as a callback
+template <typename Compare>
+void sortVector(std::vector<int>& v, Compare comp) {
+    std::sort(v.begin(), v.end(), comp);
+}
+
+int main() {
+    std::vector<int> v = {1, 5, 3, 2};
+
+    // Lambda as a callback
+    int factor = 10;
+    sortVector(v, [factor](int a, int b) {
+        return (a * factor) < (b * factor); // captured variable, custom behavior
+    });
+
+    // Functor as a callback
+    struct Descending {
+        bool operator()(int a, int b) const { return a > b; }
+    };
+    sortVector(v, Descending());
+
+    // Function pointer as a callback
+    auto ascending = [](int a, int b) { return a < b; };
+    sortVector(v, ascending);
+}
+```
+
+**Key points:**
+
+* **Callbacks** define how the template behaves. They can be:
+
+  * **Function pointers**: simple, cannot store state.
+  * **Functors** (objects with `operator()`): can store state and be reused.
+  * **Lambdas**: concise, inline, can capture variables by value `[factor]` or reference `[&factor]`, support multiple parameters and references.
+* Multiple parameters and references are fully supported, e.g.:
+
+```cpp
+auto multiplyAndCompare = [](int& a, int& b, int factor) {
+    return (a * factor) < (b * factor);
+};
+```
+
+This allows templates to handle **dynamic, caller-defined behavior** while remaining **type-safe** and efficient.
 
 ---
 
-# Simplest Explanation
-* **Interfaces + dependency injection**
-* **Callbacks**
-* **Template parameters**
+### **2. Templates with Types (Policy Classes / Strategy Types)**
+
+Templates can also accept **types** as parameters, allowing the caller to inject a **behavior policy** or **strategy** at compile time.
+
+```cpp
+#include <vector>
+#include <memory>
+#include <iostream>
+
+// Custom allocator policy
+template <typename T>
+class MyAllocator {
+public:
+    using value_type = T;
+    MyAllocator() = default;
+
+    T* allocate(std::size_t n) {
+        std::cout << "Allocating " << n << " elements\n";
+        return static_cast<T*>(::operator new(n * sizeof(T)));
+    }
+
+    void deallocate(T* ptr, std::size_t n) {
+        std::cout << "Deallocating " << n << " elements\n";
+        ::operator delete(ptr);
+    }
+};
+
+// Vector template with customizable allocator
+template <typename T, typename Allocator = std::allocator<T>>
+using MyVector = std::vector<T, Allocator>;
+
+int main() {
+    MyVector<int> defaultVec;                 // default allocator
+    MyVector<int, MyAllocator<int>> customVec; // custom allocator
+}
+```
+
+**Explanation:**
+
+1. `MyAllocator<int>` is a **policy class** defining memory allocation strategy.
+2. `MyVector` delegates allocation to the **provided type**. The container itself doesn’t change, only its behavior does.
+3. This is a **compile-time Strategy Pattern**: the container relies on a type that implements a specific interface (allocate/deallocate).
+4. The caller can inject **different behaviors** (default allocator, custom allocator, logging strategy, error-handling strategy) without modifying the template.
+
+---
+
+### **3. Why Template Customizability Matters**
+
+* **Extreme flexibility**: You can fully change behavior at compile time without changing the code.
+* **Compile-time efficiency**: Templates avoid runtime overhead, unlike virtual function-based strategies.
+* **Reusability**: Same template can be used with different behaviors or policies.
+* **Stateful strategies**: Functors or lambdas can store state, giving dynamic control while maintaining efficiency.
+* **Supports modern C++ design patterns**: Templates can implement **strategy, policy-based design, and dependency injection** at compile time.
+
+---
+
+### **4. Real-world Examples**
+
+* **STL algorithms** like `std::sort` take custom comparators.
+* **STL containers** allow custom memory allocators.
+* **Custom logging or error handling**: define a logger policy and inject it into your classes/templates.
+* **Mathematical or functional behavior**: inject custom functors/lambdas for calculation strategies.
