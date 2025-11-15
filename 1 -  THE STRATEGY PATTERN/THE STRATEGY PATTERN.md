@@ -1,4 +1,29 @@
-# Designing for Reusability in Modern C++
+# Modern C++ Strategy Pattern & Reusability Guide
+
+## 📋 Table of Contents
+1. [Designing for Reusability in Modern C++](#designing-for-reusability-in-modern-c)
+2. [The Strategy Pattern: Overview](#the-strategy-pattern-overview)
+3. [Implementation Approaches](#implementation-approaches)
+   - [3.1 Customizability through Interfaces](#31-customizability-through-interfaces)
+     - [Dependency Inversion vs Dependency Injection](#dependency-inversion-vs-dependency-injection)
+     - [Modern Implementation Example](#modern-implementation-example)
+   - [3.2 Customizability through Callbacks](#32-customizability-through-callbacks)
+     - [What Is a Callback?](#what-is-a-callback)
+     - [Types of Callbacks in C++](#types-of-callbacks-in-c)
+     - [Why Use `std::function`?](#why-use-stdfunction)
+     - [Callbacks in the Strategy Design Pattern](#callbacks-in-the-strategy-design-pattern)
+     - [Summary Table](#summary-table)
+   - [3.3 Customizability through Template Parameters](#33-customizability-through-template-parameters)
+     - [Templates with Callable Parameters](#templates-with-callable-parameters)
+     - [Templates with Types (Policy Classes)](#templates-with-types-policy-classes)
+     - [Why Template Customizability Matters](#why-template-customizability-matters)
+4. [Comparison: When to Use What](#comparison-when-to-use-what)
+5. [Modern C++ Best Practices](#modern-c-best-practices)
+6. [Key Takeaways](#key-takeaways)
+
+---
+
+## Designing for Reusability in Modern C++
 
 Reusable and maintainable code is a core principle of modern software development. Whether you're building a small class or a full subsystem, design your code so it can be used again—by you or by other developers. This idea follows well-known principles:
 
@@ -6,7 +31,7 @@ Reusable and maintainable code is a core principle of modern software developmen
 * **Avoid duplication.**
 * **DRY — Don’t Repeat Yourself.**
 
-## Why Reusability Matters
+### Why Reusability Matters
 
 1. **You will need the same functionality again.**
    Reusable code saves you from rewriting the same logic in future projects.
@@ -25,9 +50,9 @@ Reusable and maintainable code is a core principle of modern software developmen
 
 ---
 
-# The Strategy Pattern
+## The Strategy Pattern: Overview
 
-The strategy design pattern is one way to support the dependency inversion principle (DIP) With this pattern, interfaces are used to invert dependency relationships. Interfaces are created for every provided service. If a component needs a set of services interfacesto those services are injected into the component, a mechanism called dependency injection. Using the strategy pattern makes unit testing easier, as you can easily mock services away. As an example, this section discusses a logging mechanism implemented with the strategy pattern.
+The strategy design pattern is one way to support the dependency inversion principle (DIP). With this pattern, interfaces are used to invert dependency relationships. Interfaces are created for every provided service. If a component needs a set of services, interfaces to those services are injected into the component—a mechanism called dependency injection. Using the strategy pattern makes unit testing easier, as you can easily mock services away. As an example, this section discusses a logging mechanism implemented with the strategy pattern.
 
 The idea is:
 
@@ -35,11 +60,74 @@ The idea is:
 
 So instead of hard-coding how something works, you let the caller choose how they want it to behave.
 
-There are several ways to do this in C++:
+There are several ways to do this in C++.
 
 ---
 
-# 1. **Customizability through Interfaces (Dependency Inversion + Dependency Injection)**
+## Implementation Approaches
+
+### 3.1 Customizability through Interfaces
+
+This classic object-oriented approach uses runtime polymorphism via abstract base classes.
+
+#### Dependency Inversion vs Dependency Injection
+
+These two concepts are related but **not the same**. One is a **principle**, the other is a **technique / implementation**.
+
+##### 1. Dependency Inversion Principle (DIP)
+
+The **Dependency Inversion Principle** is a **design principle** that states:
+
+1. **High-level modules should not depend on low-level modules. Both should depend on abstractions.**
+2. **Abstractions should not depend on details. Details should depend on abstractions.**
+
+```cpp
+class ILogger {   // abstraction
+public:
+    virtual void log(const std::string& message) = 0;
+    virtual ~ILogger() = default;
+};
+
+// High-level module
+class Foo {
+    ILogger* logger;   // depends on abstraction
+public:
+    explicit Foo(ILogger* l) : logger(l) {}
+    void doSomething() { logger->log("Hello DIP!"); }
+};
+```
+
+##### 2. Dependency Injection (DI)
+
+**Dependency Injection** is a **technique to implement DIP**. It means **providing dependencies from outside instead of creating them inside**.
+
+```cpp
+class ConsoleLogger : public ILogger {
+public:
+    void log(const std::string& message) override {
+        std::cout << message << "\n";
+    }
+};
+
+int main() {
+    ConsoleLogger consoleLogger;
+    Foo foo(&consoleLogger);  // Inject dependency
+    foo.doSomething();
+}
+```
+
+##### 3. Key Differences
+
+| Aspect | Dependency Inversion (DIP) | Dependency Injection (DI) |
+|--------|---------------------------|---------------------------|
+| **Type** | Design principle | Implementation technique |
+| **Goal** | High-level modules depend on abstractions | Supply dependencies externally to a class/module |
+| **Scope** | Conceptual | Practical implementation |
+| **Example** | `Foo` depends on `ILogger` instead of `ConsoleLogger` | `Foo` receives a `ConsoleLogger` instance via constructor |
+
+**In short**: DIP tells you *what* to do ("depend on abstractions"), DI shows *how* to do it ("pass the dependency in").
+
+#### Modern Implementation Example
 
 Instead of doing this:
 
@@ -88,20 +176,15 @@ int main() {
 }
 ```
 
-This is called **Dependency Injection (DI)**.
-Clients choose **how** logging happens.
+This is called **Dependency Injection (DI)**. Clients choose **how** logging happens.
 
 ---
 
-# 2. **Customizability through Callbacks**
-
-# **Callbacks in Modern C++**
+### 3.2 Customizability through Callbacks
 
 In C++, a **callback** is a **function that you pass to another function or object to be called later**. This allows you to **customize behavior** without modifying the original code. Callbacks are widely used in event handling, error handling, asynchronous programming, and implementing **strategic design patterns**.
 
----
-
-## **1. What Is a Callback?**
+#### What Is a Callback?
 
 A callback is:
 
@@ -109,23 +192,15 @@ A callback is:
 * Passed to another function or class
 * Called **later by that function/class** when some action occurs
 
-Example in plain words:
+Example in plain words: Imagine you hire a chef (callback) and tell a waiter (your function) to "call the chef when an order arrives." You don't care how the chef cooks; the waiter just calls them at the right time.
 
-> Imagine you hire a chef (callback) and tell a waiter (your function) to “call the chef when an order arrives.” You don’t care how the chef cooks; the waiter just calls them at the right time.
-
----
-
-## **2. Types of Callbacks in C++**
+#### Types of Callbacks in C++
 
 C++ supports three main kinds of callbacks:
 
----
+##### a) Function Pointer Callback
 
-### **a) Function Pointer Callback**
-
-A **function pointer** is a pointer that stores the address of a function. The function must have a fixed signature (arguments and return type).
-
-#### Example:
+A **function pointer** is a pointer that stores the address of a function. The function must have a fixed signature.
 
 ```cpp
 #include <iostream>
@@ -144,18 +219,13 @@ int main() {
 ```
 
 **Key points:**
-
 * Works with **normal functions** only
 * Simple and efficient
-* Cannot capture external variables like lambdas
+* Cannot capture external variables
 
----
-
-### **b) Function Object Callback (Functor)**
+##### b) Function Object Callback (Functor)
 
 A **function object** is an object that defines the `operator()`. It behaves like a function.
-
-#### Example:
 
 ```cpp
 #include <iostream>
@@ -178,28 +248,22 @@ int main() {
 ```
 
 **Key points:**
-
 * Can store **state** (member variables)
-* Works with templates (like `doWork<Callback>`)
+* Works with templates
 * More flexible than function pointers
 
----
-
-### **c) Lambda Callback**
+##### c) Lambda Callback
 
 A **lambda** in C++ is an **inline anonymous function** that can be defined **at the point of use**. Lambdas are a modern C++ favorite for implementing callbacks because they are concise, flexible, and can capture variables from their surrounding scope.
 
-**Key characteristics of lambdas:**
+**Key characteristics:**
+1. **Anonymous**: No separate function declaration is required
+2. **Inline**: Defined at the place you need it
+3. **Captures variables**: By value `[var]` or by reference `[&var]`
+4. **Flexible parameters**: Can take zero or more parameters, including references
+5. **Works with `std::function`**: Can store or pass lambdas anywhere a callable is expected
 
-1. **Anonymous**: No separate function declaration is required.
-2. **Inline**: Defined at the place you need it.
-3. **Captures variables**: You can capture variables from the surrounding scope **by value** (`[var]`) or **by reference** (`[&var]`).
-4. **Flexible parameters**: Can take zero or more parameters, including references.
-5. **Works with `std::function`**: You can store or pass lambdas anywhere a callable is expected.
-
----
-
-#### **Basic Example**
+###### Basic Lambda Example
 
 ```cpp
 #include <iostream>
@@ -211,23 +275,16 @@ void doWork(const std::function<void(int)>& callback) {
 
 int main() {
     int factor = 10;
-
-    // Lambda captures 'factor' by value
     doWork([factor](int x) {
         std::cout << "Lambda callback: " << x * factor << "\n";
     });
 }
 ```
 
-* `[factor]` → captures `factor` **by value** (a copy).
-* `(int x)` → the lambda accepts **one parameter**.
-* Inside the lambda, `x` is multiplied by the captured `factor` and printed.
+* `[factor]` → captures `factor` **by value** (a copy)
+* `(int x)` → the lambda accepts **one parameter**
 
----
-
-#### **Lambda with Multiple Parameters and References**
-
-You can also define lambdas that accept multiple parameters, and even pass them **by reference**:
+###### Lambda with Multiple Parameters and References
 
 ```cpp
 #include <iostream>
@@ -241,85 +298,26 @@ void doWork(const std::function<void(int&, int&)>& callback) {
 
 int main() {
     int factor = 3;
-
-    // Lambda captures 'factor' by reference and parameters by reference
     doWork([&factor](int& x, int& y) {
         x *= factor;
         y *= factor;
     });
-
-    return 0;
 }
 ```
 
 **Output:**
-
 ```
 After callback: a = 15, b = 30
 ```
 
-* `[&factor]` → captures `factor` **by reference**, so any changes inside the lambda affect the original variable.
-* `int& x, int& y` → parameters passed **by reference**, allowing the lambda to modify `a` and `b` directly.
+* `[&factor]` → captures `factor` **by reference**
+* `int& x, int& y` → parameters passed **by reference**, allowing modification
 
----
+#### Why Use `std::function`?
 
-#### **Use in Strategy Design Pattern**
-
-* Lambdas are perfect for the **Strategy pattern**, where a class delegates behavior to a callback.
-* You can inject different behaviors at runtime without changing the class.
-
-```cpp
-#include <functional>
-#include <iostream>
-
-class Processor {
-public:
-    using Strategy = std::function<void(int&, int&)>;
-    Processor(Strategy s) : strategy(s) {}
-    
-    void run() {
-        int a = 2, b = 5;
-        strategy(a, b);
-        std::cout << "Result: " << a << ", " << b << "\n";
-    }
-
-private:
-    Strategy strategy;
-};
-
-int main() {
-    int factor = 10;
-    Processor p([&factor](int& x, int& y) {
-        x *= factor;
-        y *= factor;
-    });
-    
-    p.run(); // Calls the lambda strategy
-}
-```
-
-* The `Processor` class **doesn’t know the details** of the strategy.
-* The lambda provides a **custom behavior** injected at runtime.
-
----
-
-#### **Key Points**
-
-* Lambda functions are **concise and inline**.
-* Can **capture external variables** by value (`[var]`) or reference (`[&var]`).
-* Accept **multiple parameters**, including references.
-* **Works seamlessly with `std::function`**, allowing maximum flexibility.
-* Ideal for **strategy pattern implementations**, callbacks, and customizable behavior.
-
----
-
-## **3. Why Use `std::function`?**
-
-* It wraps **any callable type** (function, lambda, functor)
+* Wraps **any callable type** (function, lambda, functor)
 * Can store the callback internally
 * Supports **dynamic polymorphism for callbacks**
-
-Example:
 
 ```cpp
 void doWork(const std::function<void(int)>& callback) {
@@ -327,19 +325,11 @@ void doWork(const std::function<void(int)>& callback) {
 }
 ```
 
-* The `const &` avoids copying the callable
-* The caller can pass any type of callback
+The `const &` avoids copying the callable.
 
----
+#### Callbacks in the Strategy Design Pattern
 
-## **4. Callbacks in the Strategy Design Pattern**
-
-The **Strategy pattern** is a **behavioral design pattern** that allows selecting an algorithm's behavior at runtime.
-
-* Instead of hardcoding behavior, you **inject it as a callback**.
-* Your main class delegates certain operations to the **callback (strategy)**.
-
-#### Example: Error handling strategy
+The **Strategy pattern** allows selecting an algorithm's behavior at runtime.
 
 ```cpp
 #include <iostream>
@@ -353,7 +343,6 @@ public:
         : errorHandler(handler) {}
 
     void run() {
-        // some logic
         errorHandler("Something went wrong");
     }
 
@@ -365,20 +354,16 @@ int main() {
     Processor p([](const std::string& msg){
         std::cerr << "[Custom Error] " << msg << "\n";
     });
-
     p.run(); // calls the lambda strategy
 }
 ```
 
 **Key points:**
-
 * The `Processor` class **does not know** how errors are handled
 * The client **injects the strategy** (callback)
 * You can easily swap different strategies without changing the `Processor` code
 
----
-
-## **5. Summary Table**
+#### Summary Table
 
 | Callback Type    | Syntax / Example                             | Notes                                   |
 | ---------------- | -------------------------------------------- | --------------------------------------- |
@@ -388,38 +373,23 @@ int main() {
 | `std::function`  | `std::function<void(int)> cb`                | Most flexible, wraps all callable types |
 
 **Use in Strategy Pattern:**
-
 * The callback represents a **strategy (behavior)**
 * Injecting different callbacks changes behavior **at runtime**
 * Encourages **reusability and clean code**
 
 ---
 
-**Takeaways**
+### 3.3 Customizability through Template Parameters
 
-1. Callbacks let your code be **flexible and reusable**.
-2. Function pointers are simple but limited.
-3. Functors are more flexible and can store state.
-4. Lambdas are concise and capture variables.
-5. `std::function` provides maximum flexibility.
-6. Using callbacks is perfect for implementing the **Strategy design pattern**.
-
----
-
-## 3. Customizability through Template Parameters
-
-C++ templates allow you to write **generic, flexible, and reusable code**. With templates, the **caller can customize types, behaviors, or policies** without modifying the implementation. This approach enables both **compile-time strategies** and **behavior injection**, making templates a powerful tool for modern C++ design.
+C++ templates allow you to write **generic, flexible, and reusable code**. With templates, the **caller can customize types, behaviors, or policies** without modifying the implementation. This approach enables both **compile-time strategies** and **behavior injection**.
 
 Templates enable two main types of customization:
+1. **Behavior injection via callables** (function pointers, functors, lambdas)
+2. **Behavior injection via types / policy classes** (strategy-style customization)
 
-1. **Behavior injection via callables** (function pointers, functors, lambdas).
-2. **Behavior injection via types / policy classes** (strategy-style customization).
+#### Templates with Callable Parameters
 
----
-
-### **1. Templates with Callable Parameters**
-
-Templates can accept **callable objects** (functions, function pointers, functors, lambdas) to define behavior dynamically.
+Templates can accept **callable objects** to define behavior dynamically.
 
 ```cpp
 #include <iostream>
@@ -439,7 +409,7 @@ int main() {
     // Lambda as a callback
     int factor = 10;
     sortVector(v, [factor](int a, int b) {
-        return (a * factor) < (b * factor); // captured variable, custom behavior
+        return (a * factor) < (b * factor);
     });
 
     // Functor as a callback
@@ -455,27 +425,13 @@ int main() {
 ```
 
 **Key points:**
+* **Callbacks** define how the template behaves: function pointers, functors, or lambdas
+* Multiple parameters and references are fully supported
+* **Type-safe** and efficient
 
-* **Callbacks** define how the template behaves. They can be:
+#### Templates with Types (Policy Classes)
 
-  * **Function pointers**: simple, cannot store state.
-  * **Functors** (objects with `operator()`): can store state and be reused.
-  * **Lambdas**: concise, inline, can capture variables by value `[factor]` or reference `[&factor]`, support multiple parameters and references.
-* Multiple parameters and references are fully supported, e.g.:
-
-```cpp
-auto multiplyAndCompare = [](int& a, int& b, int factor) {
-    return (a * factor) < (b * factor);
-};
-```
-
-This allows templates to handle **dynamic, caller-defined behavior** while remaining **type-safe** and efficient.
-
----
-
-### **2. Templates with Types (Policy Classes / Strategy Types)**
-
-Templates can also accept **types** as parameters, allowing the caller to inject a **behavior policy** or **strategy** at compile time.
+Templates can accept **types** as parameters, allowing compile-time strategy injection.
 
 ```cpp
 #include <vector>
@@ -511,27 +467,120 @@ int main() {
 ```
 
 **Explanation:**
+1. `MyAllocator<int>` is a **policy class** defining memory allocation strategy
+2. `MyVector` delegates allocation to the **provided type**
+3. This is a **compile-time Strategy Pattern**: the container relies on a type that implements a specific interface
+4. The caller can inject **different behaviors** without modifying the template
 
-1. `MyAllocator<int>` is a **policy class** defining memory allocation strategy.
-2. `MyVector` delegates allocation to the **provided type**. The container itself doesn’t change, only its behavior does.
-3. This is a **compile-time Strategy Pattern**: the container relies on a type that implements a specific interface (allocate/deallocate).
-4. The caller can inject **different behaviors** (default allocator, custom allocator, logging strategy, error-handling strategy) without modifying the template.
+#### Why Template Customizability Matters
 
----
-
-### **3. Why Template Customizability Matters**
-
-* **Extreme flexibility**: You can fully change behavior at compile time without changing the code.
-* **Compile-time efficiency**: Templates avoid runtime overhead, unlike virtual function-based strategies.
-* **Reusability**: Same template can be used with different behaviors or policies.
-* **Stateful strategies**: Functors or lambdas can store state, giving dynamic control while maintaining efficiency.
-* **Supports modern C++ design patterns**: Templates can implement **strategy, policy-based design, and dependency injection** at compile time.
+* **Extreme flexibility**: Fully change behavior at compile time without changing code
+* **Compile-time efficiency**: Templates avoid runtime overhead (no virtual calls)
+* **Reusability**: Same template can be used with different behaviors or policies
+* **Stateful strategies**: Functors or lambdas can store state while maintaining efficiency
+* **Supports modern C++ design patterns**: Implements **strategy, policy-based design, and dependency injection** at compile time
 
 ---
 
-### **4. Real-world Examples**
+## Comparison: When to Use What
 
-* **STL algorithms** like `std::sort` take custom comparators.
-* **STL containers** allow custom memory allocators.
-* **Custom logging or error handling**: define a logger policy and inject it into your classes/templates.
-* **Mathematical or functional behavior**: inject custom functors/lambdas for calculation strategies.
+| Approach | Runtime Overhead | Flexibility | Testability | Use Case |
+|----------|------------------|-------------|-------------|----------|
+| **Interfaces (DI)** | Virtual calls (minimal) | High | Excellent | Large systems, mocking required |
+| **Callbacks** | Type-erasure (`std::function`) | Very High | Good | Event handlers, small strategies |
+| **Templates** | None (compile-time) | Medium* | Harder† | Performance-critical, policy-based |
+
+*Flexibility: Strategy fixed at compile time  
+†Testing: Requires template-heavy test frameworks or explicit instantiation
+
+**Decision Tree:**
+```plaintext
+Need runtime polymorphism? → Yes → Use Interfaces
+                                    ↓
+Need maximum performance? → Yes → Use Templates
+                                    ↓
+Need quick, inline behavior? → Yes → Use Callbacks/Lambdas
+```
+
+---
+
+## Modern C++ Best Practices
+
+### ✅ Do's
+
+- **Use `std::unique_ptr` for ownership**: Clear, safe, self-documenting
+- **Prefer `std::function` for callbacks**: Type-erased, flexible
+- **Leverage lambdas**: Capture state concisely with `[&]` or `[=]`
+- **Apply `std::move`**: Efficiently transfer ownership of strategies
+- **Document with `[[nodiscard]]`**: For factory functions
+- **Concepts (C++20)**: Constrain template parameters
+  ```cpp
+  template <typename T>
+  concept Logger = requires(T t, std::string_view msg) {
+      { t.log(msg) } -> std::same_as<void>;
+  };
+  ```
+
+### ❌ Don'ts
+
+- **Raw pointers for ownership**: Use smart pointers
+- **Static/global state**: Makes testing impossible
+- **Overuse `std::function`**: For simple templates, prefer direct callable types
+- **Capture all by reference `[&]`**: Be explicit about captures
+- **Forget virtual destructors**: Base classes must have `virtual ~Base() = default;`
+
+---
+
+## Key Takeaways
+
+1. **Strategy Pattern = Dependency Injection**: Decouple behavior from implementation.
+2. **Modern C++ = Multiple Tools**: Interfaces, callbacks, and templates are complementary.
+3. **Smart Pointers are Mandatory**: Use `unique_ptr` for DI; use `shared_ptr`/`weak_ptr` for observers.
+4. **Lambdas are King**: For 90% of callbacks, lambdas provide the best balance of clarity and power.
+5. **Performance Matters**: Use templates when virtual calls are unacceptable.
+6. **Testability is Crucial**: Design strategies to be mockable from day one.
+
+---
+
+## 📚 Resources
+
+- **Book**: *Professional C++ 6th Edition* (Marc Gregoire) - Chapter on Design Patterns
+- **C++ Core Guidelines**: [R.11: Avoid calling `new` and `delete` explicitly](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#R11)
+- **Pattern Catalog**: [Refactoring.Guru - Strategy Pattern](https://refactoring.guru/design-patterns/strategy)
+- **Testing**: Use **GoogleMock** with interface-based strategies
+
+---
+
+## 🎯 Example: Putting It All Together
+
+```cpp
+// Modern, flexible, testable error handler
+class ErrorHandler {
+public:
+    virtual ~ErrorHandler() = default;
+    virtual void handle(std::string_view error) = 0;
+};
+
+class Application {
+public:
+    // Injects both interface and callback for maximum flexibility
+    explicit Application(
+        std::unique_ptr<ErrorHandler> handler,
+        std::function<void()> onStartup = []{})
+        : errorHandler_(std::move(handler))
+        , startupCallback_(std::move(onStartup)) {}
+
+    void run() {
+        startupCallback_();
+        try {
+            // ... app logic ...
+        } catch (const std::exception& e) {
+            errorHandler_->handle(e.what());
+        }
+    }
+
+private:
+    std::unique_ptr<ErrorHandler> errorHandler_;
+    std::function<void()> startupCallback_;
+};
+```
