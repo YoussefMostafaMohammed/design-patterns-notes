@@ -1,5 +1,6 @@
 # Abstract Factory Design Pattern
 
+
 ## Table of Contents
 
 - [What is the Abstract Factory Pattern?](#what-is-the-abstract-factory-pattern)
@@ -40,75 +41,101 @@ You need to create cars from different manufacturers (Ford, Toyota), and each ma
 ### The Solution Structure
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    CLIENT CODE                                  │
-│  (Uses ICarFactory, doesn't know concrete brands)              │
-└─────────────────────────────────────────────────────────────────┘
-                                   │
-                                   ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              ABSTRACT FACTORY (ICarFactory)                     │
-│  - makeSuv()   → returns ICar*                                  │
-│  - makeSedan() → returns ICar*                                  │
-└─────────────────────────────────────────────────────────────────┘
-           ▲                               ▲
-           │                               │
-    ┌──────┴──────┐                 ┌──────┴──────┐
-    │             │                 │             │
-┌───┴────┐   ┌────┴────┐       ┌───┴────┐   ┌────┴────┐
-│FORD    │   │TOYOTA   │       │FORD    │   │TOYOTA   │
-│FACTORY │   │FACTORY  │       │SEDAN   │   │SEDAN    │
-└───┬────┘   └────┬────┘       └───┬────┘   └────┬────┘
-    │             │                 │             │
-    └──────┬──────┘                 └──────┬──────┘
-           │                               │
-    ┌──────▼───────────────────────┬───────▼────────┐
-    │    CONCRETE PRODUCTS         │   PRODUCTS     │
-    │  - FordSuv                   │  - ToyotaSuv   │
-    │  - FordSedan                 │  - ToyotaSedan │
-    └──────────────────────────────┴────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                             CLIENT CODE                             │
+│  "I need a family of cars, but I don't care about the brand"      │
+└─────────────────────────────────────┬───────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────┼───────────────────────────────┐
+│        ABSTRACT FACTORY INTERFACE   │                               │
+│                                     ▼                               │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │                    ICarFactory (Abstract)                    │  │
+│  │  + makeSuv()   : unique_ptr<ICar>                            │  │
+│  │  + makeSedan() : unique_ptr<ICar>                            │  │
+│  └────────────────────────┬───────────────────────────────────────┘  │
+│                           │                                         │
+│        ┌──────────────────┼──────────────────┐                      │
+│        ▼                  ▼                  ▼                      │
+│  ┌─────────────┐   ┌──────────────┐   ┌──────────────┐            │
+│  │ FordFactory │   │ToyotaFactory │   │ HondaFactory │            │
+│  │ (Concrete)  │   │ (Concrete)   │   │  (Concrete)  │            │
+│  └──────┬──────┘   └──────┬───────┘   └──────┬───────┘            │
+│         │                 │                    │                    │
+│         │  CREATES        │  CREATES           │  CREATES           │
+│         ▼                 ▼                    ▼                    │
+└─────────┼─────────────────┼────────────────────┼────────────────────┘
+          │                 │                    │
+          ▼                 ▼                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                     CONCRETE PRODUCTS                               │
+│                                                                     │
+│  FordSuv, FordSedan          ToyotaSuv, ToyotaSedan          ...   │
+│  (All implement ICar)          (All implement ICar)                 │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Class Hierarchy Diagram
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                            ICar (Abstract Product)                   │
-│   <<interface>>                                                      │
-│   + info() : string                                                  │
-│   + ~ICar() {virtual}                                                │
-└──────────────────┬───────────────────────────────────────────────────┘
-                   │
-        ┌──────────┴──────────┬───────────────┐
-        │                     │               │
-    ┌───▼────────┐      ┌─────▼──────┐       │
-    │   Ford     │      │   Toyota   │       │
-    │(Abstract)  │      │(Abstract)  │       │
-    └────┬───────┘      └─────┬──────┘       │
-         │                    │              │
-    ┌────┴──────┐        ┌────┴──────┐      │
-    │           │        │           │      │
-┌───▼──────┐ ┌──▼────────┐ ┌──▼──────────┐ │
-│FordSedan │ │ FordSuv   │ │ToyotaSedan  │ │
-└──────────┘ └───────────┘ └─────────────┘ │
-                                           │
-                                           │
-┌──────────────────────────────────────────┘
-│
-┌──────────────────────────────────────────────────────────────────────┐
-│                     ICarFactory (Abstract Factory)                   │
-│   <<interface>>                                                      │
-│   + makeSuv() : unique_ptr<ICar>                                     │
-│   + makeSedan() : unique_ptr<ICar>                                   │
-│   + ~ICarFactory() {virtual}                                         │
-└──────────────────┬───────────────────────────────────────────────────┘
-                   │
-        ┌──────────┴──────────┐
-        │                     │
-    ┌───▼────────┐      ┌─────▼────────┐
-    │FordFactory │      │ToyotaFactory │
-    └────────────┘      └──────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                    PRODUCT HIERARCHY                                │
+│                                                                     │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │                           ICar (Abstract)                     │  │
+│  │                       <<interface>>                           │  │
+│  │                     + info() : string                         │  │
+│  │                     + ~ICar() {virtual}                       │  │
+│  └──────────────────────────┬────────────────────────────────────┘  │
+│                             │                                       │
+│              ┌──────────────┴──────────────┐                        │
+│              │                             │                        │
+│        ┌─────▼──────┐             ┌────────▼──────┐                │
+│        │   Ford     │             │   Toyota      │                │
+│        │(Abstract)  │             │(Abstract)     │                │
+│        └─────┬──────┘             └───────┬───────┘                │
+│              │                             │                        │
+│      ┌───────┴────────┐            ┌───────┴──────────┐            │
+│      │                │            │                  │            │
+│ ┌────▼──────┐   ┌─────▼──────┐ ┌───▼──────────┐ ┌────▼────────┐   │
+│ │FordSedan  │   │  FordSuv   │ │ToyotaSedan   │ │ ToyotaSuv   │   │
+│ │(Concrete) │   │ (Concrete) │ │ (Concrete)   │ │  (Concrete) │   │
+│ └───────────┘   └────────────┘ └──────────────┘ └─────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+                                   ▲
+                                   │
+                                   │
+┌──────────────────────────────────┼─────────────────────────────────┐
+│              FACTORY HIERARCHY   │                                 │
+│                                  │                                 │
+│  ┌───────────────────────────────▼──────────────────────────────┐ │
+│  │                    ICarFactory (Abstract)                    │ │
+│  │                        <<interface>>                         │ │
+│  │               + makeSuv() : unique_ptr<ICar>                │ │
+│  │               + makeSedan() : unique_ptr<ICar>              │ │
+│  │               + ~ICarFactory() {virtual}                    │ │
+│  └───────────────────────────────┬───────────────────────────────┘ │
+│                                  │                                 │
+│              ┌───────────────────┴───────────────────┐             │
+│              │                                       │             │
+│        ┌─────▼──────────┐                  ┌────────▼──────┐       │
+│        │ FordFactory    │                  │ ToyotaFactory │       │
+│        │ (Concrete)     │                  │  (Concrete)   │       │
+│        └────────────────┘                  └───────────────┘       │
+└─────────────────────────────────────────────────────────────────────┘
 ```
+
+### Product vs. Factory Relationship
+
+| Aspect | Product Hierarchy (Cars) | Factory Hierarchy (Factories) |
+|--------|--------------------------|-------------------------------|
+| **Purpose** | Defines WHAT can be created | Defines WHO creates them |
+| **Base Type** | `ICar` (abstract interface) | `ICarFactory` (abstract interface) |
+| **Concrete Types** | `FordSuv`, `ToyotaSedan`, etc. | `FordFactory`, `ToyotaFactory` |
+| **Relationship** | Is-a: FordSuv *is a* ICar | Creates-a: FordFactory *creates* FordSuv |
+| **Client Knows** | Only ICar interface | Only ICarFactory interface |
+| **Key Benefit** | Polymorphic car objects | Guarantees compatible families |
 
 ---
 
@@ -573,29 +600,43 @@ void testCarCreation() {
 ## Summary Flowchart
 
 ```
-                    Client Needs Objects
-                            │
-                            ▼
-              Client Calls Abstract Factory
-                            │
-                            ▼
-         ┌──────────────────┼──────────────────┐
-         │                  │                  │
-    ┌────▼────┐        ┌────▼─────┐      ┌────▼─────┐
-    │ Ford    │        │ Toyota   │      │  Honda   │
-    │ Factory │        │ Factory  │      │ Factory  │
-    └────┬────┘        └────┬─────┘      └────┬─────┘
-         │                  │                  │
-         └──────────┬───────┴──────────┬───────┘
-                    ▼                  ▼
-            ┌──────────────┐    ┌──────────────┐
-            │  Ford SUV    │    │ Toyota SUV   │
-            │  Ford Sedan  │    │ Toyota Sedan │
-            └──────────────┘    └──────────────┘
-                    │
-                    ▼
-            Client Uses Objects
-           (No knowledge of concrete types)
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 1: CLIENT CODE                                                │
+│  "I need a family of cars, but I don't care about the brand"      │
+│  createAndDisplayCars(factory);                                     │
+└───────────────────────────────┬─────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 2: ABSTRACT FACTORY INTERFACE                                 │
+│  factory.makeSuv();                                                 │
+│  factory.makeSedan();                                               │
+└───────────────────────────────┬─────────────────────────────────────┘
+                                │
+        ┌───────────────────────┼───────────────────────┐
+        │                       │                       │
+        ▼                       ▼                       ▼
+┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
+│  FordFactory    │   │ ToyotaFactory   │   │  HondaFactory   │
+│  (if selected)  │   │  (if selected)  │   │  (if selected)  │
+└────────┬────────┘   └────────┬────────┘   └────────┬────────┘
+         │                     │                     │
+         │  creates_family_of  │  creates_family_of  │  creates_family_of
+         ▼                     ▼                     ▼
+┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
+│  FordSuv        │   │  ToyotaSuv      │   │  HondaSuv       │
+│  FordSedan      │   │  ToyotaSedan    │   │  HondaSedan     │
+└─────────────────┘   └─────────────────┘   └─────────────────┘
+         │                     │                     │
+         └───────────┬─────────┴──────────┬──────────┘
+                     │                    │
+                     ▼                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 3: CLIENT USES PRODUCTS                                       │
+│  suv->info();  // "Ford SUV" or "Toyota SUV" or ...               │
+│  sedan->info(); // "Ford Sedan" or "Toyota Sedan" or ...          │
+│  (Client still doesn't know the concrete type!)                    │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
