@@ -1,6 +1,6 @@
 # Builder Design Pattern
 
-## Table of Contents
+## 📋 Table of Contents
 
 - [Why Builder Design Pattern Matters](#why-builder-design-pattern-matters)
 - [The 5 Core Problems That Led to Builder Pattern](#the-5-core-problems-that-led-to-builder-pattern)

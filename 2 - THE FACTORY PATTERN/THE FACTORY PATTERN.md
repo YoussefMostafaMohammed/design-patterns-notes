@@ -1,6 +1,6 @@
 # Factory Patterns
 
-## Table of Contents
+## 📋 Table of Contents
 
 - [Why Design Patterns Matter](#why-design-patterns-matter)
 - [The 5 Core Problems That Led to Factory Patterns](#the-5-core-problems-that-led-to-factory-patterns)
