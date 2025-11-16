@@ -9,13 +9,12 @@
 - [Factory Method Pattern](#factory-method-pattern)
 - [Abstract Factory Pattern](#abstract-factory-pattern)
 - [Detailed Comparison: Factory Method vs Abstract Factory](#detailed-comparison-factory-method-vs-abstract-factory)
-- [Benefits and Drawbacks](#benefits-and-drawbacks)
+- [Additional Real-World Examples](#additional-real-world-examples)
 - [Best Practices](#best-practices)
 - [Modern C++ Enhancements](#modern-c-enhancements)
 - [Testing with Factory Patterns](#testing-with-factory-patterns)
-- [Real-World Examples](#real-world-examples)
-- [How to Compile and Run](#how-to-compile-and-run)
 - [Summary Flowchart](#summary-flowchart)
+- [How to Compile and Run](#how-to-compile-and-run)
 - [Key Takeaways](#key-takeaways)
 
 ---
@@ -563,37 +562,100 @@ int main() {
 
 ## Detailed Comparison: Factory Method vs Abstract Factory
 
-This section provides an in-depth analysis of the two most commonly confused factory patterns.
+### Why They Look the Same in C++
 
-### What Each Pattern Does
+Both patterns are implemented using:
+- Interfaces / abstract base classes
+- `virtual` factory functions
+- Polymorphism
 
-**Factory Method:**
-- Creates **one type of product** per factory call
-- Uses **inheritance** to defer instantiation to subclasses
-- The **subclass** decides exactly which product to create
-- Follows the "virtual constructor" idiom
-- Example: `ToyotaFactory::requestCar()` returns a Toyota car, but the base class `CarFactory::requestCar()` defines the process
+Because C++ doesn't have "interfaces" like Java or C#, we use abstract classes for both. This makes them look identical syntactically:
 
-**Abstract Factory:**
-- Creates **families of related products** in one factory
-- Uses **composition** (the client composes with a factory object)
-- The **factory interface** defines what products can be created
-- The **concrete factory** decides which family's products to create
-- Example: `FordFactory::makeSuv()` and `FordFactory::makeSedan()` guarantee compatible Ford products
+```cpp
+// Factory Method
+class Creator {
+public:
+    virtual ICar* createCar() = 0;
+};
 
-### Core Differences in Philosophy
+class FordFactory : public Creator {
+public:
+    ICar* createCar() override { return new FordCar(); }
+};
 
-| Aspect | Factory Method | Abstract Factory |
-|--------|----------------|------------------|
-| **Intent** | "I want to create an object, but I want my subclasses to decide the exact type" | "I want to create families of related objects without depending on concrete classes" |
-| **Scope** | Single product creation | Multiple related products creation |
-| **Design Focus** | **WHO** creates the object (which subclass) | **WHAT** family of objects to create |
-| **Relationship Type** | Is-a (inheritance) | Has-a (composition) |
-| **Primary Benefit** | Runtime polymorphic object creation | Ensures compatibility between related products |
+// Abstract Factory
+class CarFactory {
+public:
+    virtual ICar* createCar() = 0;
+    virtual IEngine* createEngine() = 0;
+};
+```
+
+But their **intent**, **scope**, and **use-cases** are different.
+
+### The One Sentence Difference
+
+**Factory Method:** A single virtual function to create **ONE product**.
+
+**Abstract Factory:** A family of virtual functions to create **RELATED products** (car + engine + wheels + seats... same brand).
+
+### Technical Explanation of Each Pattern
+
+#### Factory Method — Purpose
+
+Let subclasses decide **which specific product class** to instantiate, without changing the code that uses the factory.
+
+**Key Points:**
+- Produces **a single type** of product
+- You override **one virtual method** like `create()`
+- It's about **customizing object creation** in a subclass
+
+**Minimal structure:**
+```cpp
+class Product {
+public:
+    virtual void run() = 0;
+    virtual ~Product() = default;
+};
+
+class Creator {
+public:
+    virtual std::unique_ptr<Product> create() = 0;
+    virtual ~Creator() = default;
+};
+```
+
+**When to use:** When your class needs to create objects, but you **want subclasses to choose the exact concrete type**.
+
+#### Abstract Factory — Purpose
+
+Provide an interface to create an **entire family of related products**, *ensuring they are compatible*.
+
+**Key Points:**
+- Produces **multiple products** (family)
+- Each product has its own abstract type
+- The factory provides **multiple creation functions**
+
+```cpp
+class UIAbstractFactory {
+public:
+    virtual std::unique_ptr<Button> createButton() = 0;
+    virtual std::unique_ptr<TextField> createTextField() = 0;
+    virtual ~UIAbstractFactory() = default;
+};
+```
+
+**When to use:** When your system must work with **different product families** and must **never mix incompatible ones**.
 
 ### Implementation Differences
 
 #### Factory Method Implementation Characteristics
+
+**Key Implementation Points:**
+- Uses **Template Method pattern** (public non-virtual method calling private virtual method)
+- **Single creation method** per factory
+- Factory hierarchy **inherits** creation behavior
+- **Subclass decides** the exact product type
 
 ```cpp
 // 1. Single product interface
@@ -625,13 +687,13 @@ private:
 };
 ```
 
-**Key Implementation Points:**
-- Uses **Template Method pattern** (public non-virtual method calling private virtual method)
-- **Single creation method** per factory
-- Factory hierarchy **inherits** creation behavior
-- **Subclass decides** the exact product type
-
 #### Abstract Factory Implementation Characteristics
+
+**Key Implementation Points:**
+- **Multiple creation methods** in one interface
+- **No factory hierarchy inheritance** of creation logic (each concrete factory implements all methods)
+- **Parallel hierarchies**: Product hierarchy AND Factory hierarchy
+- **Factory decides** the entire family of products
 
 ```cpp
 // 1. Multiple product interfaces
@@ -643,8 +705,6 @@ class IWheels { /* ... */ };
 class ICarFactory {
 public:
     virtual ~ICarFactory() = default;
-    
-    // Multiple related products
     virtual std::unique_ptr<ICar> makeSuv() = 0;
     virtual std::unique_ptr<ICar> makeSedan() = 0;
     virtual std::unique_ptr<IEngine> makeEngine() = 0;
@@ -666,12 +726,6 @@ public:
     // ... all other methods
 };
 ```
-
-**Key Implementation Points:**
-- **Multiple creation methods** in one interface
-- **No factory hierarchy inheritance** of creation logic (each concrete factory implements all methods)
-- **Parallel hierarchies**: Product hierarchy AND Factory hierarchy
-- **Factory decides** the entire family of products
 
 ### When to Use Each Pattern
 
@@ -744,6 +798,23 @@ buildCompleteVehicle(ford);    // All Ford parts
 buildCompleteVehicle(toyota);  // All Toyota parts
 ```
 
+### Why Abstract Factory Often Uses Factory Methods Inside
+
+**Abstract Factory = a collection of Factory Methods.**
+
+Example:
+
+```cpp
+class CarAbstractFactory {
+public:
+    virtual std::unique_ptr<SUV> createSUV() = 0;          // factory method
+    virtual std::unique_ptr<Sedan> createSedan() = 0;      // factory method
+    virtual std::unique_ptr<Truck> createTruck() = 0;      // factory method
+};
+```
+
+So the pattern names refer to **intent**, not syntax.
+
 ### Summary of Differences
 
 | Comparison Point | Factory Method | Abstract Factory |
@@ -758,163 +829,7 @@ buildCompleteVehicle(toyota);  // All Toyota parts
 
 ---
 
-## Benefits and Drawbacks
-
-### Benefits
-
-| Benefit | Explanation |
-|---------|-------------|
-| **Encapsulation** | Details of object creation are hidden from the client |
-| **Consistency** | Guarantees that products from one family work together |
-| **Flexibility** | Easy to switch between entire families of products |
-| **Scalability** | Adding new product families is straightforward |
-| **Testability** | Easy to mock factories for unit testing |
-| **Decoupling** | Client code depends on abstractions, not concrete classes |
-
-### Drawbacks
-
-| Drawback | Explanation |
-|----------|-------------|
-| **Complexity** | More classes and interfaces to manage |
-| **Extensibility** | Hard to add new product types (requires changing the abstract factory interface) |
-| **Redundancy** | Can lead to duplicate code in concrete factories |
-| **Overhead** | May be unnecessary for simple object creation scenarios |
-| **Maintenance** | Parallel hierarchies (products + factories) increase maintenance burden |
-
----
-
-## Best Practices
-
-### 1. Always Use Virtual Destructors
-```cpp
-virtual ~ICarFactory() = default;  // Prevents memory leaks!
-```
-
-### 2. Prefer `unique_ptr` for Return Values
-```cpp
-// Good: Clear ownership transfer
-virtual std::unique_ptr<ICar> makeSuv() = 0;
-
-// Bad: Raw pointers, unclear ownership
-virtual ICar* makeSuv() = 0;
-```
-
-### 3. Keep Factories Lightweight
-Factories should focus on creation, not complex business logic.
-
-### 4. Consider Dependency Injection
-```cpp
-// Inject the factory instead of hardcoding
-class CarDealership {
-private:
-    ICarFactory& factory;  // Reference to abstract factory
-public:
-    CarDealership(ICarFactory& f) : factory(f) {}
-    
-    void showInventory() {
-        auto suv = factory.makeSuv();
-        auto sedan = factory.makeSedan();
-        // ...
-    }
-};
-```
-
-### 5. Use Enums for Factory Selection
-```cpp
-enum class CarBrand { FORD, TOYOTA };
-
-std::unique_ptr<ICarFactory> createFactory(CarBrand brand) {
-    switch(brand) {
-        case CarBrand::FORD: return std::make_unique<FordFactory>();
-        case CarBrand::TOYOTA: return std::make_unique<ToyotaFactory>();
-        default: throw std::invalid_argument("Unknown brand");
-    }
-}
-```
-
-### 6. Document Product Families
-Clearly document which products belong to which families and why they must be used together.
-
----
-
-## Modern C++ Enhancements
-
-### Using `std::expected` (C++23) for Error Handling
-```cpp
-#include <expected>
-
-std::expected<std::unique_ptr<ICar>, std::string> 
-ToyotaFactory::makeSuv() {
-    try {
-        return std::make_unique<ToyotaSuv>();
-    } catch(...) {
-        return std::unexpected("Failed to create Toyota SUV");
-    }
-}
-```
-
-### Using Concepts (C++20) for Constraints
-```cpp
-template<typename T>
-concept CarConcept = std::is_base_of_v<ICar, T>;
-
-template<CarConcept T>
-class Factory {
-    std::unique_ptr<ICar> create() {
-        return std::make_unique<T>();
-    }
-};
-```
-
-### Using Modules (C++20)
-```cpp
-// Instead of #pragma once
-export module CarFactory;
-
-export class ICar { /* ... */ };
-```
-
----
-
-## Testing with Factory Patterns
-
-```cpp
-// Mock Factory for Testing
-class MockCarFactory : public ICarFactory {
-public:
-    std::unique_ptr<ICar> makeSuv() override {
-        auto mock = std::make_unique<Mock<ICar>>();
-        mock->info() = "Mock SUV";
-        return mock;
-    }
-    std::unique_ptr<ICar> makeSedan() override {
-        auto mock = std::make_unique<Mock<ICar>>();
-        mock->info() = "Mock Sedan";
-        return mock;
-    }
-};
-
-// Test
-void testCarCreation() {
-    MockCarFactory mockFactory;
-    createAndDisplayCars(mockFactory);  // Works seamlessly!
-}
-
-// Google Test Example
-TEST(CarFactoryTest, AbstractFactoryCreatesCompatibleFamily) {
-    FordFactory factory;
-    auto suv = factory.makeSuv();
-    auto sedan = factory.makeSedan();
-    
-    // Verify both are Ford brand
-    EXPECT_TRUE(dynamic_cast<Ford*>(suv.get()));
-    EXPECT_TRUE(dynamic_cast<Ford*>(sedan.get()));
-}
-```
-
----
-
-## Real-World Examples
+## Additional Real-World Examples
 
 ### GUI Component Library
 
@@ -1056,63 +971,178 @@ void processData(IDbFactory& dbFactory) {
 
 ---
 
-## How to Compile and Run
+## Best Practices
 
-### Using g++
-
-```bash
-# For C++17 and above (without modules)
-g++ -std=c++17 -o car_factory main.cpp Cars.cpp ICarFactory.cpp FordFactory.cpp ToyotaFactory.cpp
-
-# Run
-./car_factory
-
-# For C++20 with modules support
-g++ -std=c++20 -fmodules-ts -o car_factory main.cpp
-
-# With optimizations
-g++ -std=c++17 -O2 -Wall -Wextra -o car_factory main.cpp
+### 1. Always Use Virtual Destructors
+```cpp
+virtual ~ICarFactory() = default;  // Prevents memory leaks!
 ```
 
-### Using CMake
+### 2. Prefer `unique_ptr` for Return Values
+```cpp
+// Good: Clear ownership transfer
+virtual std::unique_ptr<ICar> makeSuv() = 0;
 
-```cmake
-cmake_minimum_required(VERSION 3.15)
-project(CarFactory)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Create executable
-add_executable(car_factory 
-    main.cpp
-    Cars.hpp
-    ICarFactory.hpp
-    FordFactory.hpp
-    ToyotaFactory.hpp
-)
-
-# For modular approach, use:
-# add_executable(car_factory main.cpp)
-# target_compile_features(car_factory PUBLIC cxx_std_20)
+// Bad: Raw pointers, unclear ownership
+virtual ICar* makeSuv() = 0;
 ```
 
-### Using Make
+### 3. Keep Factories Lightweight
+Factories should focus on creation, not complex business logic.
 
-```makefile
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -O2
-TARGET = car_factory
-SOURCES = main.cpp Cars.cpp ICarFactory.cpp FordFactory.cpp ToyotaFactory.cpp
+### 4. Consider Dependency Injection
+```cpp
+// Inject the factory instead of hardcoding
+class CarDealership {
+private:
+    ICarFactory& factory;  // Reference to abstract factory
+public:
+    CarDealership(ICarFactory& f) : factory(f) {}
+    
+    void showInventory() {
+        auto suv = factory.makeSuv();
+        auto sedan = factory.makeSedan();
+        // ...
+    }
+};
+```
 
-$(TARGET): $(SOURCES)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SOURCES)
+### 5. Use Enums for Factory Selection
+```cpp
+enum class CarBrand { FORD, TOYOTA };
 
-clean:
-	rm -f $(TARGET)
+std::unique_ptr<ICarFactory> createFactory(CarBrand brand) {
+    switch(brand) {
+        case CarBrand::FORD: return std::make_unique<FordFactory>();
+        case CarBrand::TOYOTA: return std::make_unique<ToyotaFactory>();
+        default: throw std::invalid_argument("Unknown brand");
+    }
+}
+```
 
-run: $(TARGET)
-	./$(TARGET)
+### 6. Document Product Families
+Clearly document which products belong to which families and why they must be used together.
+
+### 7. Avoid Over-Engineering
+Use the simplest pattern that satisfies your requirements. Simple Factory is often sufficient for basic cases.
+
+---
+
+## Modern C++ Enhancements
+
+### Using `std::expected` (C++23) for Error Handling
+```cpp
+#include <expected>
+
+std::expected<std::unique_ptr<ICar>, std::string> 
+ToyotaFactory::makeSuv() {
+    try {
+        return std::make_unique<ToyotaSuv>();
+    } catch(...) {
+        return std::unexpected("Failed to create Toyota SUV");
+    }
+}
+```
+
+### Using Concepts (C++20) for Constraints
+```cpp
+template<typename T>
+concept CarConcept = std::is_base_of_v<ICar, T>;
+
+template<CarConcept T>
+class Factory {
+    std::unique_ptr<ICar> create() {
+        return std::make_unique<T>();
+    }
+};
+```
+
+### Using Modules (C++20)
+```cpp
+// Instead of #pragma once
+export module CarFactory;
+
+export class ICar { /* ... */ };
+```
+
+### Using `std::variant` for Type-Safe Factories
+```cpp
+using CarVariant = std::variant<FordSuv*, ToyotaSuv*, HondaSuv*>;
+
+class AdvancedCarFactory {
+public:
+    virtual CarVariant createCar(const std::string& type) = 0;
+};
+```
+
+---
+
+## Testing with Factory Patterns
+
+### Mock Factory for Testing
+```cpp
+class MockCarFactory : public ICarFactory {
+public:
+    std::unique_ptr<ICar> makeSuv() override {
+        auto mock = std::make_unique<Mock<ICar>>();
+        mock->info() = "Mock SUV";
+        return mock;
+    }
+    std::unique_ptr<ICar> makeSedan() override {
+        auto mock = std::make_unique<Mock<ICar>>();
+        mock->info() = "Mock Sedan";
+        return mock;
+    }
+};
+
+// Test
+void testCarCreation() {
+    MockCarFactory mockFactory;
+    createAndDisplayCars(mockFactory);  // Works seamlessly!
+}
+```
+
+### Google Test Example
+```cpp
+TEST(CarFactoryTest, AbstractFactoryCreatesCompatibleFamily) {
+    FordFactory factory;
+    auto suv = factory.makeSuv();
+    auto sedan = factory.makeSedan();
+    
+    // Verify both are Ford brand
+    EXPECT_TRUE(dynamic_cast<Ford*>(suv.get()));
+    EXPECT_TRUE(dynamic_cast<Ford*>(sedan.get()));
+}
+
+TEST(CarFactoryTest, FactoryMethodPolymorphicCreation) {
+    FordFactory fordFactory;
+    ToyotaFactory toyotaFactory;
+    
+    auto fordCar = fordFactory.requestCar();
+    auto toyotaCar = toyotaFactory.requestCar();
+    
+    EXPECT_EQ(fordCar->info(), "Ford");
+    EXPECT_EQ(toyotaCar->info(), "Toyota");
+}
+```
+
+### Testing LeastBusyFactory
+```cpp
+TEST(CarFactoryTest, LeastBusyFactoryDistributesLoad) {
+    std::vector<std::unique_ptr<CarFactory>> factories;
+    factories.push_back(std::make_unique<FordFactory>());
+    factories.push_back(std::make_unique<ToyotaFactory>());
+    
+    // Pre-use one factory
+    factories[0]->requestCar();
+    factories[0]->requestCar();
+    
+    LeastBusyFactory leastBusy(std::move(factories));
+    
+    // Should create from least busy (Toyota)
+    auto car = leastBusy.requestCar();
+    EXPECT_EQ(car->info(), "Toyota");
+}
 ```
 
 ---
@@ -1139,16 +1169,16 @@ run: $(TARGET)
 ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
 │  FordFactory    │   │ ToyotaFactory   │   │  HondaFactory   │
 │  (if selected)  │   │  (if selected)  │   │  (if selected)  │
-└────────┬────────┘   └────────┬────────┘   └────────┬────────┘
-         │                     │                     │
-         │  creates_family_of  │  creates_family_of  │  creates_family_of
-         ▼                     ▼                     ▼
+└────────┬────────┘   └────────┬────────┘   └────────\┬────────┘
+         │                     │                      │
+         │  creates_family_of  │  creates_family_of   │  creates_family_of
+         ▼                     ▼                      ▼
 ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
 │  FordSuv        │   │  ToyotaSuv      │   │  HondaSuv       │
 │  FordSedan      │   │  ToyotaSedan    │   │  HondaSedan     │
 └─────────────────┘   └─────────────────┘   └─────────────────┘
-         │                     │                     │
-         └───────────┬─────────┴──────────┬──────────┘
+         │                     │                      │
+         └───────────┬─────────┴──────────┬───────────┘
                      │                    │
                      ▼                    ▼
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -1161,15 +1191,115 @@ run: $(TARGET)
 
 ---
 
+## How to Compile and Run
+
+### Using g++
+
+```bash
+# For C++17 and above (without modules)
+g++ -std=c++17 -o car_factory main.cpp Cars.cpp ICarFactory.cpp FordFactory.cpp ToyotaFactory.cpp
+
+# Run
+./car_factory
+
+# For C++20 with modules support
+g++ -std=c++20 -fmodules-ts -o car_factory main.cpp
+
+# With optimizations and warnings
+g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic -o car_factory main.cpp
+
+# Debug build
+g++ -std=c++17 -g -DDEBUG -o car_factory main.cpp
+```
+
+### Using CMake
+
+```cmake
+cmake_minimum_required(VERSION 3.15)
+project(CarFactory)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Create executable
+add_executable(car_factory 
+    main.cpp
+    Cars.hpp
+    ICarFactory.hpp
+    FordFactory.hpp
+    ToyotaFactory.hpp
+)
+
+# For modular approach, use:
+# add_executable(car_factory main.cpp)
+# target_compile_features(car_factory PUBLIC cxx_std_20)
+
+# Add testing
+enable_testing()
+add_executable(test_car_factory test.cpp)
+target_link_libraries(test_car_factory gtest gtest_main)
+add_test(NAME CarFactoryTest COMMAND test_car_factory)
+```
+
+### Using Make
+
+```makefile
+CXX = g++
+CXXFLAGS = -std=c++17 -Wall -Wextra -Wpedantic -O2
+DEBUGFLAGS = -std=c++17 -g -DDEBUG
+TARGET = car_factory
+SOURCES = main.cpp Cars.cpp ICarFactory.cpp FordFactory.cpp ToyotaFactory.cpp
+TEST_SOURCES = test.cpp Cars.cpp ICarFactory.cpp FordFactory.cpp ToyotaFactory.cpp
+
+all: $(TARGET)
+
+$(TARGET): $(SOURCES)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SOURCES)
+
+debug: $(SOURCES)
+	$(CXX) $(DEBUGFLAGS) -o $(TARGET) $(SOURCES)
+
+test: test_car_factory
+	./test_car_factory
+
+test_car_factory: $(TEST_SOURCES)
+	$(CXX) $(CXXFLAGS) -o test_car_factory $(TEST_SOURCES) -lgtest -lgtest_main
+
+clean:
+	rm -f $(TARGET) test_car_factory
+
+run: $(TARGET)
+	./$(TARGET)
+```
+
+### Using Clang
+
+```bash
+clang++ -std=c++17 -stdlib=libc++ -o car_factory main.cpp
+```
+
+### Using Visual Studio
+
+```powershell
+cl /std:c++17 /EHsc main.cpp Cars.cpp ICarFactory.cpp FordFactory.cpp ToyotaFactory.cpp
+```
+
+---
+
 ## Key Takeaways
 
-1. **Simple Factory** = Single class that creates objects based on parameters (not a true pattern)
-2. **Factory Method** = Subclasses decide which single product to create (inheritance-based)
-3. **Abstract Factory** = Interface for creating families of related objects (composition-based)
-4. **Use Abstract Factory** when products must work together and cannot be mixed
-5. **Use Factory Method** when you want subclasses to control object instantiation
-6. **Use Simple Factory** when you just need to hide implementation details
+1. **Abstract Factory** = Interface for creating **families** of related objects
+2. **Factory Method** = Subclasses decide which **single product** to create
+3. **Simple Factory** = **One class** decides based on parameters (not a true pattern)
+4. Use **Abstract Factory** when products must work together (no mixing brands)
+5. Use **Factory Method** when subclasses should control object instantiation
+6. Use **Simple Factory** when you just need to hide implementation details
 7. All factory patterns **decouple** client code from concrete classes
 8. They **centralize** object creation logic and make code **testable**
 9. Abstract Factory is the most **complex** but provides the strongest **consistency guarantees**
 10. Choose the **simplest pattern** that satisfies your requirements (KISS principle)
+11. **Abstract Factory often uses Factory Methods inside it** - it's a collection of Factory Methods
+12. The pattern names refer to **intent**, not syntax - both use virtual functions but solve different problems
+13. **Parallel hierarchies** are the hallmark of Abstract Factory (Product hierarchy + Factory hierarchy)
+14. **Template Method pattern** is the hallmark of Factory Method (NVI - Non-Virtual Interface)
+15. **Factory Method** is inheritance-based, **Abstract Factory** is composition-based
