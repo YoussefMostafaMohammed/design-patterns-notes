@@ -16,7 +16,6 @@
 - [Testing with Abstract Factory](#testing-with-abstract-factory)
 - [Summary Flowchart](#summary-flowchart)
 - [How to Compile and Run](#how-to-compile-and-run)
-- [Recommended Reading](#recommended-reading)
 - [Key Takeaways](#key-takeaways)
 
 ---
