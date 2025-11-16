@@ -1,8 +1,4 @@
-# Abstract Factory Design Pattern - Complete Guide
-
-A comprehensive explanation of the Abstract Factory pattern using the Car Factory simulation and additional real-world examples.
-
----
+# Abstract Factory Design Pattern
 
 ## Table of Contents
 
